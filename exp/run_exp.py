@@ -8,7 +8,7 @@ from data.data_loading import DataLoader, load_dataset, load_graph_dataset
 from torch_geometric.data import DataLoader as PyGDataLoader
 from exp.train_utils import train, eval, Evaluator
 from exp.parser import get_parser
-from mp.models import SIN0, Dummy, SparseSIN0
+from mp.models import SIN0, Dummy, SparseSIN0, MessagePassingAgnostic
 from mp.graph_models import GIN0
 
 from definitions import ROOT_DIR
@@ -104,6 +104,17 @@ def main(args):
                      readout=args.readout,                    # readout
                     ).to(device)
         
+    elif args.model == 'mp_agnostic':
+        
+        model = MessagePassingAgnostic(dataset.num_features_in_dim(0),    # num_input_features
+                                 dataset.num_classes,                     # num_classes
+                                 args.emb_dim,                            # hidden
+                                 dropout_rate=args.drop_rate,             # dropout rate
+                                 max_dim=dataset.max_dim,                 # max_dim
+                                 nonlinearity=args.nonlinearity,          # nonlinearity
+                                 readout=args.readout,                    # readout
+                                ).to(device)
+
     elif args.model == 'gin':
         
         model = GIN0(num_features,                            # num_input_features
