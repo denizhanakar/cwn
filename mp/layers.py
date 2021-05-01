@@ -193,6 +193,7 @@ class SparseSINChainConv(ChainMessagePassing):
         self.eps2.data.fill_(self.initial_eps)
 
     def message_up(self, up_x_j: Tensor, up_attr: Tensor) -> Tensor:
+        # return self.msg_up_nn(torch.cat([up_x_j, up_attr], dim=-1))
         return self.msg_up_nn(up_x_j, up_attr)
 
     def message_and_aggregate_faces(self, face_attr: Tensor) -> Tensor:
@@ -215,6 +216,12 @@ class SparseSINConv(torch.nn.Module):
         self.max_dim = max_dim
         self.mp_levels = torch.nn.ModuleList()
         for dim in range(max_dim+1):
+            # ----
+            if msg_up_nn is None:
+                msg_up_nn = Sequential(
+                    Linear(kwargs['layer_dim'] * 2, kwargs['layer_dim']),
+                    kwargs['act_module']())
+            # ---
             if inp_update_up_nn is None:
                 if apply_norm:
                     update_up_nn = Sequential(

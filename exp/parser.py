@@ -3,6 +3,8 @@ import argparse
 
 def get_parser():
     parser = argparse.ArgumentParser(description='SCN experiment.')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='random seed to set (default: None (will eventually be set to 43))')
     parser.add_argument('--device', type=int, default=0,
                         help='which gpu to use if any (default: 0)')
     parser.add_argument('--model', type=str, default='sparse_sin',

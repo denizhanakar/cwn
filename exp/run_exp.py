@@ -10,7 +10,7 @@ from torch_geometric.data import DataLoader as PyGDataLoader
 from exp.train_utils import train, eval, Evaluator
 from exp.parser import get_parser
 from mp.graph_models import GIN0, GINWithJK
-from mp.models import SIN0, Dummy, SparseSIN, EdgeOrient, EdgeMPNN
+from mp.models import SIN0, Dummy, SparseSIN, EdgeOrient, EdgeMPNN, MessagePassingAgnostic
 
 from definitions import ROOT_DIR
 
@@ -36,9 +36,13 @@ def main(args):
     print(args)
 
     # Set the seed for everything
-    torch.manual_seed(43)
-    np.random.seed(43)
-    random.seed(43)
+    if args.seed is not None:
+        seed = args.seed
+    else:
+        seed = 43
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
     if args.exp_name is None:
         # get timestamp for results and set result directory
@@ -54,7 +58,8 @@ def main(args):
     
     if args.model.startswith('gin'):  # load graph dataset
         
-        graph_list, train_ids, val_ids, test_ids, num_classes = load_graph_dataset(args.dataset, fold=args.fold)
+        graph_list, train_ids, val_ids, test_ids, num_classes = load_graph_dataset(args.dataset,
+                                                            fold=args.fold, emb_dim=args.emb_dim)
         train_graphs = [graph_list[i] for i in train_ids]
         val_graphs = [graph_list[i] for i in val_ids]
         train_loader = PyGDataLoader(train_graphs, batch_size=args.batch_size,
@@ -124,6 +129,16 @@ def main(args):
                      readout=args.readout,                    # readout
                      final_readout=args.final_readout,        # final readout
                      apply_dropout_before=args.drop_position, # where to apply dropout
+                    ).to(device)
+    elif args.model == 'mp_agnostic':    
+        model = MessagePassingAgnostic(
+                     dataset.num_features_in_dim(0),          # num_input_features
+                     dataset.num_classes,                     # num_classes
+                     args.emb_dim,                            # hidden
+                     dropout_rate=args.drop_rate,             # dropout rate
+                     max_dim=dataset.max_dim,                 # max_dim
+                     nonlinearity=args.nonlinearity,          # nonlinearity
+                     readout=args.readout,                    # readout
                     ).to(device)
     elif args.model == 'gin':
         model = GIN0(num_features,                            # num_input_features
@@ -257,10 +272,13 @@ def main(args):
         
     else:
         print('Evaluating...')
-        train_curve.append(eval(model, device, train_loader, evaluator))
-        valid_curve.append(eval(model, device, valid_loader, evaluator))
+        train_perf, _ = eval(model, device, train_loader, evaluator, args.task_type)
+        train_curve.append(train_perf)
+        val_perf, _ = eval(model, device, valid_loader, evaluator, args.task_type)
+        valid_curve.append(val_perf)
         if test_loader is not None:
-            test_curve.append(eval(model, device, test_loader, evaluator))
+            test_perf, _ = eval(model, device, test_loader, evaluator, args.task_type)
+            test_curve.append(test_perf)
         else:
             test_curve.append(np.nan)
         best_val_epoch = 0
