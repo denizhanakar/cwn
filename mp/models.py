@@ -340,8 +340,10 @@ class MessagePassingAgnostic(torch.nn.Module):
         for dim in range(len(params)):
             xs.append(model_nonlinearity(self.lin0(params[dim].x)))
         pooled_xs = self.pool_complex(xs, data)
+        # vvv
+        pooled_xs = model_nonlinearity(self.lin1(pooled_xs))
         x = pooled_xs.sum(dim=0)
-        x = model_nonlinearity(self.lin1(x))
+        # x = model_nonlinearity(self.lin1(x))
         x = F.dropout(x, p=self.dropout_rate, training=self.training)
         x = self.lin2(x)
         return x
